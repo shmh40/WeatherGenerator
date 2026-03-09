@@ -21,7 +21,7 @@ Once you get confirmation, kick off the experimentation.
 
 ## Experimentation
 
-Each experiment runs on a 1 node, with 4 GPUs. The training script runs for a **fixed time budget of 20 minutes** (wall clock training time, excluding startup/compilation of the slurm job). You launch it simply as: `../WeatherGenerator-private/hpc/launch-slurm.py --base-config config/EXPERIMENT_CONFIG.yml`, where `EXPERIMENT_CONFIG.yml` is a config file you create for this experiment (you can copy from previous ones and modify).
+Each experiment runs on a 1 node, with 4 GPUs. The training script runs for a **fixed time budget of 20 minutes** (wall clock training time, excluding startup/compilation of the slurm job). You launch it simply as: `../WeatherGenerator-private/hpc/launch-slurm.py --base-config config/EXPERIMENT_CONFIG.yml`, where `EXPERIMENT_CONFIG.yml` is a config file you create for this experiment (you can copy from previous ones and modify). Note this command also sets off a cleanup script, which is not relevant.
 
 **What you CAN do:**
 - Modify files in `src/weathergen/` — this is the only directory you edit. All files in here are fair game: model architecture, optimizer, hyperparameters, training loop and so on. 
@@ -75,7 +75,7 @@ Each experiment runs on a 1 node, with 4 GPUs. The training script runs for a **
 
 **Simplicity criterion**: All else being equal, simpler is better. A small improvement that adds ugly complexity is not worth it. Conversely, removing something and getting equal or better results is a great outcome — that's a simplification win. When evaluating whether to keep a change, weigh the complexity cost against the improvement magnitude. A 0.001 validation loss improvement that adds 20 lines of hacky code? Probably not worth it. A 0.001 validation loss improvement from deleting code? Definitely keep. An improvement of ~0 but much simpler code? Keep.
 
-**The first run**: Your very first run should always be to establish the baseline, so you will run the training script as is, using config/default_config.yml, without any modifications.
+**The first run**: Your very first run should always be to establish the baseline, so you will run the training script as is, using `../WeatherGenerator-private/hpc/launch_slurm.py --base-config config/default_config.yml`, without any modifications.
 
 ## Output format
 
