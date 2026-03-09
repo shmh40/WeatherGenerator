@@ -9,7 +9,7 @@ tools: [vscode, execute, read, agent, edit, search, web, todo]
 
 To set up a new experiment, work with the user to:
 
-1. **Agree on a run tag**: propose a tag based on today's date (e.g. `mar5`). The branch `autoresearch/<tag>` must not already exist — this is a fresh run.
+1. **Agree on a run tag**: propose a tag based on today's date (e.g. `mar9`). The branch `autoresearch/<tag>` must not already exist — this is a fresh run.
 2. **Create the branch**: `git checkout -b autoresearch/<tag>` from current develop.
 3. **Read the in-scope files**: The repo is large. Read these directories for full context:
    -  `src/weathergen/`— model code that you can modify. Model architecture, optimizer, training loop.
@@ -116,7 +116,7 @@ d4e5f6g	0.000000	0.0	crash	double model width (OOM)
 
 ## The experiment loop
 
-The experiment runs on a dedicated branch (e.g. `autoresearch/mar5` or `autoresearch/mar5-gpu0`).
+The experiment runs on a dedicated branch (e.g. `autoresearch/mar9` or `autoresearch/mar9-learning-rate`).
 
 LOOP FOREVER:
 
@@ -124,13 +124,13 @@ LOOP FOREVER:
 2. Tune `src/weathergen/` with an experimental idea by directly editing the code.
 3. git commit
 4. Run the experiment: `../WeatherGenerator-private/hpc/launch_slurm.py --base-config config/EXPERIMENT_CONFIG.yml` (make sure to specify the correct config file for this experiment, which should be in the same branch and should have a unique name so you can keep track of it). Wait until the slurm job is submitted, which you can confirm by inspecting the terminal output after this command.
-5. While you wait for this experiment to run, you can start thinking about the next experiment and preparing the code changes for it, but you MUST commit those changes to a NEW BRANCH (e.g. `autoresearch/mar5-exp2`) before again launching the slurm job. The launch-slurm copies only what is currently committed to be run in the slurm job. This is very important. This way you can have multiple experiments running in parallel, but keep the code changes for each experiment organized in separate branches.
+5. While you wait for this experiment to run, you can start thinking about the next experiment and preparing the code changes for it, but you MUST commit those changes to a NEW BRANCH (e.g. `autoresearch/mar9-exp2`) before again launching the slurm job. The launch-slurm copies only what is currently committed to be run in the slurm job. This is very important. This way you can have multiple experiments running in parallel, but keep the code changes for each experiment organized in separate branches.
 6. When a given slurm job is finished (you can check with `squeue -u $USER`), read out the results from the RUN_ID_train_metrics.json file, and extract the key metric loss.LossPhysical.ERA5.mse.loss_avg at the "val" stage, and compare to baseline. If it's an improvement, keep it. If it's not, discard.
 6. If the output is empty, the run crashed. Inspect /hpcperm/ecm8347/work/wg_autoresearch/WeatherGenerator/output/output_RUNID_SLURMID.txt to read the Python stack trace and attempt a fix. If you can't get things to work after more than a few attempts, give up.
 7. Record the results in the tsv (NOTE: do not commit the results.tsv file, leave it untracked by git)
 8. If loss.LossPhysical.ERA5.mse.loss_avg improved (lower), you "advance" the branch, keeping the git commit
 9. If loss.LossPhysical.ERA5.mse.loss_avg is equal or worse, you git reset back to where you started
-10. NOTE: since you can run multiple experiments in parallel, you should be VERY CAREFUL to commit each change to separate branches (e.g. `autoresearch/mar5-exp1`, `autoresearch/mar5-exp2`, etc) before running the experiment with WeatherGenerator in THAT BRANCH, and then only switching to a new idea (and hence new branch) once the launch-slurm script has completed successfully. Then you should merge a successful branch back to the main experiment branch (e.g. `develop`) only if it's an improvement. This way you can keep the history clean and avoid confusion.
+10. NOTE: since you can run multiple experiments in parallel, you should be VERY CAREFUL to commit each change to separate branches (e.g. `autoresearch/mar9-exp1`, `autoresearch/mar9-exp2`, etc) before running the experiment with WeatherGenerator in THAT BRANCH, and then only switching to a new idea (and hence new branch) once the launch-slurm script has completed successfully. Then you should merge a successful branch back to the main experiment branch (e.g. `develop`) only if it's an improvement. This way you can keep the history clean and avoid confusion.
 
 The idea is that you are a completely autonomous researcher trying things out. If they work, keep. If they don't, discard. And you're advancing the branch so that you can iterate. If you feel like you're getting stuck in some way, you can rewind but you should probably do this very very sparingly (if ever).
 
