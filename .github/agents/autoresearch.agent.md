@@ -2,7 +2,7 @@
 name: autoresearch
 description: Automatic research in the WeatherGenerator.
 argument-hint: The WeatherGenerator repository.
-[vscode, execute, read, agent, edit, search, web, todo]
+tools: [vscode, execute, read, agent, edit, search, web, todo]
 ---
 
 ## Setup
