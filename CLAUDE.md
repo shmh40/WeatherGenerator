@@ -14,7 +14,7 @@ Once you get confirmation, kick off the experimentation.
 
 ## Experimentation
 
-Each experiment runs on a 1 node, with 4 GPUs. The training script runs for a **fixed time budget of 20 minutes** (wall clock training time, excluding startup/compilation of the slurm job). You launch it simply as: `../WeatherGenerator-private/hpc/launch-slurm.py --base-config config/EXPERIMENT_CONFIG.yml`, where `EXPERIMENT_CONFIG.yml` is a config file you create for this experiment (you can copy from previous ones and modify). Note this command also sets off a cleanup script, which is not relevant.
+Each experiment runs on a 1 node, with 4 GPUs. The training script runs for a **fixed time budget of 20 minutes** (wall clock training time, excluding startup/compilation of the slurm job). You launch it simply as: `../WeatherGenerator-private/hpc/launch-slurm.py --base-config config/EXPERIMENT_CONFIG.yml`, where `EXPERIMENT_CONFIG.yml` is a config file you create for this experiment (you can copy from previous ones and modify). Note this command also sets off a cleanup script, which is not relevant. You do not need to read the launch-slurm.py script, it simply sets off a slurm job beginning training.
 
 **What you CAN do:**
 - Modify files in `src/weathergen/` — this is the only directory you edit. All files in here are fair game: model architecture, optimizer, hyperparameters, training loop and so on. 
@@ -68,7 +68,7 @@ Each experiment runs on a 1 node, with 4 GPUs. The training script runs for a **
 
 **Simplicity criterion**: All else being equal, simpler is better. A small improvement that adds ugly complexity is not worth it. Conversely, removing something and getting equal or better results is a great outcome — that's a simplification win. When evaluating whether to keep a change, weigh the complexity cost against the improvement magnitude. A 0.001 validation loss improvement that adds 20 lines of hacky code? Probably not worth it. A 0.001 validation loss improvement from deleting code? Definitely keep. An improvement of ~0 but much simpler code? Keep.
 
-**The first run**: Your very first run should always be to establish the baseline, so you will run the training script as is, using `../WeatherGenerator-private/hpc/launch_slurm.py --base-config config/default_config.yml`, without any modifications.
+**The first run**: Your very first run should always be to establish the baseline, so you will run the training script as is, using `../WeatherGenerator-private/hpc/launch-slurm.py --base-config config/default_config.yml`, without any modifications.
 
 ## Output format
 
@@ -116,7 +116,7 @@ LOOP FOREVER:
 1. Look at the git state: the current branch/commit we're on
 2. Tune `src/weathergen/` with an experimental idea by directly editing the code.
 3. git commit
-4. Run the experiment: `../WeatherGenerator-private/hpc/launch_slurm.py --base-config config/EXPERIMENT_CONFIG.yml` (make sure to specify the correct config file for this experiment, which should be in the same branch and should have a unique name so you can keep track of it). Wait until the slurm job is submitted, which you can confirm by inspecting the terminal output after this command.
+4. Run the experiment: `../WeatherGenerator-private/hpc/launch-slurm.py --base-config config/EXPERIMENT_CONFIG.yml` (make sure to specify the correct config file for this experiment, which should be in the same branch and should have a unique name so you can keep track of it). Wait until the slurm job is submitted, which you can confirm by inspecting the terminal output after this command.
 5. While you wait for this experiment to run, you can start thinking about the next experiment and preparing the code changes for it, but you MUST commit those changes to a NEW BRANCH (e.g. `autoresearch/mar9-exp2`) before again launching the slurm job. The launch-slurm copies only what is currently committed to be run in the slurm job. This is very important. This way you can have multiple experiments running in parallel, but keep the code changes for each experiment organized in separate branches.
 6. When a given slurm job is finished (you can check with `squeue -u $USER`), read out the results from the RUN_ID_train_metrics.json file, and extract the key metric loss.LossPhysical.ERA5.mse.loss_avg at the "val" stage, and compare to baseline. If it's an improvement, keep it. If it's not, discard.
 6. If the output is empty, the run crashed. Inspect /hpcperm/ecm8347/work/wg_autoresearch/WeatherGenerator/output/output_RUNID_SLURMID.txt to read the Python stack trace and attempt a fix. If you can't get things to work after more than a few attempts, give up.
