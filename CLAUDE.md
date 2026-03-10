@@ -7,8 +7,8 @@ To set up a new experiment, work with the user to:
 3. **Read the in-scope files**: The repo is large. Read these directories for full context:
    - `src/weathergen/`— model code that you can modify. Model architecture, optimizer, training loop.
    - `config/` — the configuration files that you can modify. 
-5. **Initialize results.tsv**: Check if `results.tsv` exists. If not, create it with just the header row. The baseline will be recorded after the first run.
-6. **Confirm and go**: Confirm the you have an understanding and you are ready to go.
+5. **Check or initialize results.tsv**: Check if `results.tsv` exists. If not, create it with just the header row. The baseline will be recorded after the first run.
+6. **Confirm and go**: Confirm that you have an understanding and you are ready to go.
 
 Once you get confirmation, kick off the experimentation.
 
