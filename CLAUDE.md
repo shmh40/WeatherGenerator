@@ -14,7 +14,7 @@ Once you get confirmation, kick off the experimentation.
 
 ## Experimentation
 
-Each experiment runs on a 1 node, with 4 GPUs. The training script runs for a **fixed time budget of 20 minutes** (wall clock training time, excluding startup/compilation of the slurm job). You launch it simply as: `../WeatherGenerator-private/hpc/launch-slurm.py --base-config config/EXPERIMENT_CONFIG.yml`, where `EXPERIMENT_CONFIG.yml` is a config file you create for this experiment (you can copy from previous ones and modify). Note this command also sets off a cleanup script, which is not relevant. You do not need to read the launch-slurm.py script, it simply sets off a slurm job beginning training.
+Each experiment runs on a 1 node, with 4 GPUs. The training script runs for a **fixed time budget of 20 minutes** (wall clock training time, excluding startup/compilation of the slurm job). You launch it simply as: `../WeatherGenerator-private/hpc/launch-slurm.py --base-config config/EXPERIMENT_CONFIG.yml`, where `EXPERIMENT_CONFIG.yml` is a config file you create for this experiment (you can copy from previous ones and modify). Note this command also sets off a cleanup script, which is not relevant. You do not need to read the WeatherGenerator-private repository, or the launch-slurm.py script, it simply sets off a slurm job beginning training.
 
 **What you CAN do:**
 - Modify files in `src/weathergen/` — this is the only directory you edit. All files in here are fair game: model architecture, optimizer, hyperparameters, training loop and so on. 
