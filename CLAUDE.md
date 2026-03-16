@@ -14,7 +14,7 @@ Once you get confirmation, kick off the experimentation.
 
 ## Experimentation
 
-Each experiment runs on a 1 node, with 4 GPUs. The training script runs for a **fixed time budget of 20 minutes** (wall clock training time, excluding startup/compilation of the slurm job). You launch it simply as: `../WeatherGenerator-private/hpc/launch-slurm.py --base-config config/EXPERIMENT_CONFIG.yml`, where `EXPERIMENT_CONFIG.yml` is a config file you create for this experiment (you can copy from previous ones and modify). Note this command also sets off a cleanup script, which is not relevant. You do not need to read the WeatherGenerator-private repository, or the launch-slurm.py script, it simply sets off a slurm job beginning training.
+Each experiment runs on a 1 node, with 4 GPUs. The training script runs for a **fixed time budget of 2 hours** (wall clock training time, excluding startup/compilation of the slurm job). You launch it simply as: `../WeatherGenerator-private/hpc/launch-slurm.py --base-config config/EXPERIMENT_CONFIG.yml`, where `EXPERIMENT_CONFIG.yml` is a config file you create for this experiment (you can copy from previous ones and modify). Note this command also sets off a cleanup script, which is not relevant. You do not need to read the WeatherGenerator-private repository, or the launch-slurm.py script, it simply sets off a slurm job beginning training.
 
 **What you CAN do:**
 - Modify files in `src/weathergen/` — this is the only directory you edit. All files in here are fair game: model architecture, optimizer, hyperparameters, training loop and so on. 
@@ -62,7 +62,7 @@ Each experiment runs on a 1 node, with 4 GPUs. The training script runs for a **
 
 - Modify the validation_config component of the config.
 
-**The goal is simple: get the lowest validation loss.** Since the time budget is fixed, you don't need to worry about training time — it's always 20 minutes. Everything is fair game: change the architecture, the optimizer, the hyperparameters, the batch size, the model size. The only constraint is that the code runs without crashing.
+**The goal is simple: get the lowest validation loss.** Since the time budget is fixed, you don't need to worry about training time — it's always 2 hours. Everything is fair game: change the architecture, the optimizer, the hyperparameters, the batch size, the model size. The only constraint is that the code runs without crashing.
 
 **VRAM** is a soft constraint. Some increase is acceptable for meaningful validation loss gains, but it should not blow up dramatically.
 
@@ -79,7 +79,7 @@ The slurm script will generate a random 8 character RUN_ID, which will be printe
 {"weathergen.timestamp": 1764691390000, "weathergen.time": 20251202160310, "stage": "val", "num_samples": 16.0, "loss.LossPhysical.ERA5.mse.loss_avg": 1.0551681679337181, ... }
 ```
 
-Note that the script is configured to always stop after 20 minutes. You should extract the key metric from the log file, which is the latest loss.LossPhysical.ERA5.mse.loss_avg at the "val" stage, and evaluate whether it's an improvement over the baseline.
+Note that the script is configured to always stop after 2 hours. You should extract the key metric from the log file, which is the latest loss.LossPhysical.ERA5.mse.loss_avg at the "val" stage, and evaluate whether it's an improvement over the baseline.
 
 ## Logging results
 
@@ -127,10 +127,10 @@ LOOP FOREVER:
 
 The idea is that you are a completely autonomous researcher trying things out. If they work, keep. If they don't, discard. And you're advancing the branch so that you can iterate. If you feel like you're getting stuck in some way, you can rewind but you should probably do this very very sparingly (if ever).
 
-**Timeout**: Each experiment should take ~20 minutes total (+ a few seconds for startup and eval overhead). If a run exceeds 30 minutes, kill it and treat it as a failure (discard and revert).
+**Timeout**: Each experiment should take ~2 hours total (+ a few seconds for startup and eval overhead). If a run exceeds 30 minutes, kill it and treat it as a failure (discard and revert).
 
 **Crashes**: If a run crashes (OOM, or a bug, or etc.), use your judgment: If it's something dumb and easy to fix (e.g. a typo, a missing import), fix it and re-run. If the idea itself is fundamentally broken, just skip it, log "crash" as the status in the tsv, and move on.
 
 **NEVER STOP**: Once the experiment loop has begun (after the initial setup), do NOT pause to ask the human if you should continue. Do NOT ask "should I keep going?" or "is this a good stopping point?". The human might be asleep, or gone from a computer and expects you to continue working *indefinitely* until you are manually stopped. You are autonomous. If you run out of ideas, think harder — read papers referenced in the code, re-read the in-scope files for new angles, try combining previous near-misses, try more radical architectural changes. The loop runs until the human interrupts you, period.
 
-As an example use case, a user might leave you running while they sleep. If each experiment takes you ~20 minutes, and you can run 20 experiments at one time, then you can run approx 60/hour, for a total of about 480 over the duration of the average human sleep. The user then wakes up to experimental results, all completed by you while they slept!
+As an example use case, a user might leave you running while they sleep. If each experiment takes you ~2 hours, and you can run 10 experiments at one time, then you can run approx 5/hour, for a total of about 40 over the duration of the average human sleep. The user then wakes up to experimental results, all completed by you while they slept!
