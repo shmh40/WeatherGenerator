@@ -72,14 +72,14 @@ Each experiment runs on a 1 node, with 4 GPUs. The training script runs for a **
 
 ## Output format
 
-The slurm script will generate a random 8 character RUN_ID, which will be printed in the terminal. Once the slurm script has submitted its job and is running, it will save results to a log file, located here: /hpcperm/ecm8347/work/wg_autoresearch/WeatherGenerator/results/RUN_ID/RUN_ID_train_metrics.json, which has the following format, where the key metric is the latest loss.LossPhysical.ERA5.mse.loss_avg during the "val" stage:§
+The slurm script will generate a random 8 character RUN_ID, which will be printed in the terminal. Once the slurm script has submitted its job and is running, it will save results to a log file, located here: /hpcperm/ecm8347/work/wg_autoresearch/WeatherGenerator/results/RUN_ID/RUN_ID_train_metrics.json, which has the following format, where the key metric is the latest loss.LossPhysical.ERA5.mse.loss_avg during the "val" stage:
 
 ```
 {"weathergen.timestamp": 1764691348605, "weathergen.time": 20251202160228, "stage": "train", "num_samples": 32.0, "loss_avg_mean": 0.3831610083580017, ... }
 {"weathergen.timestamp": 1764691390000, "weathergen.time": 20251202160310, "stage": "val", "num_samples": 16.0, "loss.LossPhysical.ERA5.mse.loss_avg": 1.0551681679337181, ... }
 ```
 
-Note that the script is configured to always stop after 2 hours. You should extract the key metric from the log file, which is the latest loss.LossPhysical.ERA5.mse.loss_avg at the "val" stage, and evaluate whether it's an improvement over the baseline.
+Note that the script is configured to always stop after 2 hours. You should extract the key metric from the log file, which is the latest loss.LossPhysical.ERA5.mse.loss_avg at the "val" stage, and evaluate whether it's an improvement over the baseline. You can monitor jobs using: `squeue | grep weathergen`, since `squeue -u $USER` will not be available to you.
 
 ## Logging results
 
