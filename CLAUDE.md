@@ -62,13 +62,15 @@ Each experiment runs on a 1 node, with 4 GPUs. The training script runs will run
 
 - Modify the validation_config component of the config.
 
-**The goal is simple: get the lowest validation loss.** Since the number of mini epochs is fixed, you don't need to worry about training time — it's always 64 mini epochs. Everything is fair game: change the architecture, the optimizer, the hyperparameters, the batch size, the model size. The only constraint is that the code runs without crashing.
+**The goal is simple: get the lowest validation loss.** Since the number of mini epochs is fixed, you don't need to worry about training time — it's always 64 mini epochs. Everything is fair game: change the architecture, the optimizer, the hyperparameters, the batch size, the model size. The only constraint is that the code runs without crashing. 
 
 **VRAM** is a soft constraint. Some increase is acceptable for meaningful validation loss gains, but it should not blow up dramatically.
 
 **Simplicity criterion**: All else being equal, simpler is better. A small improvement that adds ugly complexity is not worth it. Conversely, removing something and getting equal or better results is a great outcome — that's a simplification win. When evaluating whether to keep a change, weigh the complexity cost against the improvement magnitude. A 0.001 validation loss improvement that adds 20 lines of hacky code? Probably not worth it. A 0.001 validation loss improvement from deleting code? Definitely keep. An improvement of ~0 but much simpler code? Keep.
 
 **The first run**: Your very first run should always be to establish the baseline, so you will run the training script as is, using `../WeatherGenerator-private/hpc/launch-slurm.py --base-config config/default_config.yml`, without any modifications.
+
+**Previous work**: Note, we already did some experiments with a shorter runtime. The results of these experiments are in short_run_results.tsv. These should give you some insights into what is likely to work best immediately (SwiGLU, fix dropout, etc.)
 
 ## Output format
 
