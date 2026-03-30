@@ -2,7 +2,7 @@
 
 To set up a new experiment, work with the user to:
 
-1. **Agree on a run tag**: propose a tag based on today's date (e.g. `mar9`). The branch `autoresearch/<tag>` must not already exist — this is a fresh run.
+1. **Agree on a run tag**: propose a tag based on today's date (e.g. `mar30`). The branch `autoresearch/<tag>` must not already exist — this is a fresh run.
 2. **Create the branch**: `git checkout -b autoresearch/<tag>` from current develop.
 3. **Read the in-scope files**: The repo is large. Read these directories for full context:
    - `src/weathergen/`— model code that you can modify. Model architecture, optimizer, training loop.
@@ -14,14 +14,14 @@ Once you get confirmation, kick off the experimentation.
 
 ## Experimentation
 
-Each experiment runs on a 1 node, with 4 GPUs. The training script runs for a **fixed time budget of 2 hours** (wall clock training time, excluding startup/compilation of the slurm job). You launch it simply as: `../WeatherGenerator-private/hpc/launch-slurm.py --base-config config/EXPERIMENT_CONFIG.yml`, where `EXPERIMENT_CONFIG.yml` is a config file you create for this experiment (you can copy from previous ones and modify). Note this command also sets off a cleanup script, which is not relevant. You do not need to read the WeatherGenerator-private repository, or the launch-slurm.py script, it simply sets off a slurm job beginning training.
+Each experiment runs on a 1 node, with 4 GPUs. The training script runs will run for a **fixed** 64 mini epochs with a fixed number of samples per mini epoch. Do not change this. You launch it simply as: `../WeatherGenerator-private/hpc/launch-slurm.py --base-config config/EXPERIMENT_CONFIG.yml`, where `EXPERIMENT_CONFIG.yml` is a config file you create for this experiment (you can copy from previous ones and modify). Note this command also sets off a cleanup script, which is not relevant. You do not need to read the WeatherGenerator-private repository, or the launch-slurm.py script, it simply sets off a slurm job beginning training.
 
 **What you CAN do:**
 - Modify files in `src/weathergen/` — this is the only directory you edit. All files in here are fair game: model architecture, optimizer, hyperparameters, training loop and so on. 
 - You can also modify the config files in `config/`, including `config/streams/` to change hyperparameters and other settings.
 
 **What you CANNOT do:**
-- Modify `../WeatherGenerator-private/`. This is **read-only**. It contains data loading and training constants (time budget, sequence length, etc).
+- Modify `../WeatherGenerator-private/`. This is **read-only**. It contains data loading and training constants (time budget, number of nodes, etc).
 - Install new packages or add dependencies. You can only use what's already in `pyproject.toml`.
 - Modify the training task, which is defined in the config here:
 
@@ -62,7 +62,7 @@ Each experiment runs on a 1 node, with 4 GPUs. The training script runs for a **
 
 - Modify the validation_config component of the config.
 
-**The goal is simple: get the lowest validation loss.** Since the time budget is fixed, you don't need to worry about training time — it's always 2 hours. Everything is fair game: change the architecture, the optimizer, the hyperparameters, the batch size, the model size. The only constraint is that the code runs without crashing.
+**The goal is simple: get the lowest validation loss.** Since the number of mini epochs is fixed, you don't need to worry about training time — it's always 64 mini epochs. Everything is fair game: change the architecture, the optimizer, the hyperparameters, the batch size, the model size. The only constraint is that the code runs without crashing.
 
 **VRAM** is a soft constraint. Some increase is acceptable for meaningful validation loss gains, but it should not blow up dramatically.
 
@@ -79,7 +79,7 @@ The slurm script will generate a random 8 character RUN_ID, which will be printe
 {"weathergen.timestamp": 1764691390000, "weathergen.time": 20251202160310, "stage": "val", "num_samples": 16.0, "loss.LossPhysical.ERA5.mse.loss_avg": 1.0551681679337181, ... }
 ```
 
-Note that the script is configured to always stop after 2 hours. You should extract the key metric from the log file, which is the latest loss.LossPhysical.ERA5.mse.loss_avg at the "val" stage, and evaluate whether it's an improvement over the baseline. You can monitor jobs using: `squeue | grep weathergen`, since `squeue -u $USER` will not be available to you.
+Note that the script is configured to always stop after 64 mini epochs. You should extract the key metric from the log file, which is the latest loss.LossPhysical.ERA5.mse.loss_avg at the "val" stage, and evaluate whether it's an improvement over the baseline. You can monitor jobs using: `squeue | grep weathergen`, since `squeue -u $USER` will not be available to you.
 
 ## Logging results
 
@@ -109,7 +109,7 @@ d4e5f6g	0.000000	0.0	crash	double model width (OOM)
 
 ## The experiment loop
 
-The experiment runs on a dedicated branch (e.g. `autoresearch/mar9` or `autoresearch/mar9-learning-rate`).
+The experiment runs on a dedicated branch (e.g. `autoresearch/mar30` or `autoresearch/mar30-learning-rate`).
 
 LOOP FOREVER:
 
@@ -117,20 +117,20 @@ LOOP FOREVER:
 2. Tune `src/weathergen/` with an experimental idea by directly editing the code.
 3. git commit
 4. Run the experiment: `../WeatherGenerator-private/hpc/launch-slurm.py --base-config config/EXPERIMENT_CONFIG.yml` (make sure to specify the correct config file for this experiment, which should be in the same branch and should have a unique name so you can keep track of it). Wait until the slurm job is submitted, which you can confirm by inspecting the terminal output after this command.
-5. While you wait for this experiment to run, you can start thinking about the next experiment and preparing the code changes for it, but you MUST commit those changes to a NEW BRANCH (e.g. `autoresearch/mar9-exp2`) before again launching the slurm job. The launch-slurm copies only what is currently committed to be run in the slurm job. This is very important. This way you can have multiple experiments running in parallel, but keep the code changes for each experiment organized in separate branches.
+5. While you wait for this experiment to run, you can start thinking about the next experiment and preparing the code changes for it, but you MUST commit those changes to a NEW BRANCH (e.g. `autoresearch/mar30-exp2`) before again launching the slurm job. The launch-slurm copies only what is currently committed to be run in the slurm job. This is very important. This way you can have multiple experiments running in parallel, but keep the code changes for each experiment organized in separate branches.
 6. When a given slurm job is finished (you can check with `squeue -u $USER`), read out the results from the RUN_ID_train_metrics.json file, and extract the key metric loss.LossPhysical.ERA5.mse.loss_avg at the "val" stage, and compare to baseline. If it's an improvement, keep it. If it's not, discard.
 6. If the output is empty, the run crashed. Inspect /hpcperm/ecm8347/work/wg_autoresearch/WeatherGenerator/output/output_RUNID_SLURMID.txt to read the Python stack trace and attempt a fix. If you can't get things to work after more than a few attempts, give up.
 7. Record the results in the tsv (NOTE: do not commit the results.tsv file, leave it untracked by git)
 8. If loss.LossPhysical.ERA5.mse.loss_avg improved (lower), you "advance" the branch, keeping the git commit
 9. If loss.LossPhysical.ERA5.mse.loss_avg is equal or worse, you git reset back to where you started
-10. NOTE: since you can run multiple experiments in parallel, you should be VERY CAREFUL to commit each change to separate branches (e.g. `autoresearch/mar9-exp1`, `autoresearch/mar9-exp2`, etc) before running the experiment with WeatherGenerator in THAT BRANCH, and then only switching to a new idea (and hence new branch) once the launch-slurm script has completed successfully. Then you should merge a successful branch back to the main experiment branch (e.g. `develop`) only if it's an improvement. This way you can keep the history clean and avoid confusion.
+10. NOTE: since you can run multiple experiments in parallel, you should be VERY CAREFUL to commit each change to separate branches (e.g. `autoresearch/mar30-exp1`, `autoresearch/mar30-exp2`, etc) before running the experiment with WeatherGenerator in THAT BRANCH, and then only switching to a new idea (and hence new branch) once the launch-slurm script has completed successfully. Then you should merge a successful branch back to the main experiment branch (e.g. `develop`) only if it's an improvement. This way you can keep the history clean and avoid confusion.
 
 The idea is that you are a completely autonomous researcher trying things out. If they work, keep. If they don't, discard. And you're advancing the branch so that you can iterate. If you feel like you're getting stuck in some way, you can rewind but you should probably do this very very sparingly (if ever).
 
-**Timeout**: Each experiment should take ~2 hours total (+ a few seconds for startup and eval overhead). If a run exceeds 30 minutes, kill it and treat it as a failure (discard and revert).
+**Timeout**: Each experiment should take ~24 hours total (+ a few seconds for startup and eval overhead). If a run exceeds 25 hours, kill it.
 
 **Crashes**: If a run crashes (OOM, or a bug, or etc.), use your judgment: If it's something dumb and easy to fix (e.g. a typo, a missing import), fix it and re-run. If the idea itself is fundamentally broken, just skip it, log "crash" as the status in the tsv, and move on.
 
-**NEVER STOP**: Once the experiment loop has begun (after the initial setup), do NOT pause to ask the human if you should continue. Do NOT ask "should I keep going?" or "is this a good stopping point?". The human might be asleep, or gone from a computer and expects you to continue working *indefinitely* until you are manually stopped. You are autonomous. If you run out of ideas, think harder — read papers referenced in the code, re-read the in-scope files for new angles, try combining previous near-misses, try more radical architectural changes. The loop runs until the human interrupts you, period.
+**NEVER STOP**: Once the experiment loop has begun (after the initial setup), do NOT pause to ask the human if you should continue. Do NOT ask "should I keep going?" or "is this a good stopping point?". The human might be asleep, or gone from a computer and expects you to continue working *indefinitely* until you are manually stopped. You are autonomous. If you run out of ideas, think harder — read papers referenced in the code, re-read the in-scope files for new angles, try combining previous near-misses, try more radical architectural changes. The loop runs until the human interrupts you, end of.
 
-As an example use case, a user might leave you running while they sleep. If each experiment takes you ~2 hours, and you can run 10 experiments at one time, then you can run approx 5/hour, for a total of about 40 over the duration of the average human sleep. The user then wakes up to experimental results, all completed by you while they slept!
+As an example use case, a user might leave you running while they sleep. If each experiment takes you ~24 hours, and you can run 8 experiments at one time, then you can run approx 8/day, for a total of about 56 over the duration of the average week.
