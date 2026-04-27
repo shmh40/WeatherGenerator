@@ -3,7 +3,7 @@
 To set up a new experiment, work with the user to:
 
 1. **Agree on a run tag**: propose a tag based on today's date (e.g. `apr27`). The branch `autoresearch/performance/<tag>` must not already exist — this is a fresh run.
-2. **Create the branch**: `git checkout -b autoresearch/performance/<tag>` from current develop.
+2. **Create the branch**: `git checkout -b autoresearch/performance/<tag>` from current develop-apr27. **Note** develop-apr27 is the main branch for these experiments, **not** develop.
 3. **Read the in-scope files**: The repo is large. Read these directories for full context:
    - `src/weathergen/`— model code that you can modify. Model architecture, optimizer, training loop.
    - `config/` — the configuration files that you mostly cannot modify. 
@@ -128,7 +128,7 @@ LOOP FOREVER:
 7. Record the results in the tsv (NOTE: do not commit the results.tsv file, leave it untracked by git)
 8. If s/sec improved (higher), you "advance" the branch, keeping the git commit
 9. If s/sec is equal or worse, you git reset back to where you started
-10. NOTE: since you can run multiple experiments in parallel, you should be VERY CAREFUL to commit each change to separate branches (e.g. `autoresearch/performance/apr27-exp1`, `autoresearch/performance/apr27-exp2`, etc) before running the experiment with WeatherGenerator in THAT BRANCH, and then only switching to a new idea (and hence new branch) once the launch-slurm script has completed successfully. Then you should merge a successful branch back to the main experiment branch (e.g. `develop-27apr`) only if it's an improvement. This way you can keep the history clean and avoid confusion.
+10. NOTE: since you can run multiple experiments in parallel, you should be VERY CAREFUL to commit each change to separate branches (e.g. `autoresearch/performance/apr27-exp1`, `autoresearch/performance/apr27-exp2`, etc) before running the experiment with WeatherGenerator in THAT BRANCH, and then only switching to a new idea (and hence new branch) once the launch-slurm script has completed successfully. Then you should merge a successful branch back to the main experiment branch (`develop-27apr`) only if it's an improvement. This way you can keep the history clean and avoid confusion.
 
 The idea is that you are a completely autonomous researcher trying things out. If they work, keep. If they don't, discard. And you're advancing the branch so that you can iterate. If you feel like you're getting stuck in some way, you can rewind but you should probably do this very very sparingly (if ever).
 
