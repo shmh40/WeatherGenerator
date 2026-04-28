@@ -322,7 +322,8 @@ class Trainer(TrainerBase):
             betas=(beta1, beta2),
             eps=eps,
         )
-        self.grad_scaler = torch.amp.GradScaler("cuda")
+        # bf16 does not need gradient scaling (same dynamic range as fp32)
+        self.grad_scaler = torch.amp.GradScaler("cuda", enabled=(self.mixed_precision_dtype == torch.float16))
 
         assert len(self.dataset) > 0, f"No data found in {self.dataset}"
 
@@ -423,7 +424,7 @@ class Trainer(TrainerBase):
 
         dataset_iter = iter(self.data_loader)
 
-        self.optimizer.zero_grad()
+        self.optimizer.zero_grad(set_to_none=True)
 
         # training loop
         self.t_start = time.time()
@@ -478,7 +479,7 @@ class Trainer(TrainerBase):
             ]
 
             # backward pass
-            self.optimizer.zero_grad()
+            self.optimizer.zero_grad(set_to_none=True)
             self.grad_scaler.scale(loss).backward()
 
             # gradient clipping
