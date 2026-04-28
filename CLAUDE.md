@@ -95,21 +95,22 @@ The TSV has a header row and 5 columns:
 commit	average_ssec loss_degradation memory_gb	status	description
 ```
 
-1. git commit hash (short, 7 chars)
-2. average_ssec — s/sec, averaged across all steps during training. Use 0.000000 for crashes
-3. loss_degradation - was the final validation loss more than 10% higher than the baseline
-4. peak memory in GB, round to .1f (e.g. 12.3 — divide peak_vram_mb by 1024) — use 0.0 for crashes
-5. status: `keep`, `discard`, or `crash`
-6. short text description of what this experiment tried
+1. run id (8 characters)
+2. git commit hash (short, 7 characters)
+3. average_ssec — s/sec, averaged across all steps during training. Use 0.000000 for crashes
+4. loss_degradation - was the final validation loss more than 10% higher than the baseline
+5. peak memory in GB, round to .1f (e.g. 12.3 — divide peak_vram_mb by 1024) — use 0.0 for crashes
+6. status: `keep`, `discard`, or `crash`
+7. short text description of what this experiment tried
 
 Example:
 
 ```
-commit	average_ssec    loss_degradation	memory_gb	status	description
-a1b2c3d	0.324	       no     44.0	keep	baseline
-b2c3d4e	0.312	       no     44.2	keep	parallelise per variable in sampling
-c3d4e5f	0.432	       yes    44.0	discard	vectorise masking
-d4e5f6g	0.000000	   0.0     0.0	crash	change GPU all gather
+run_id  commit	average_ssec    loss_degradation	memory_gb	status	description
+xcv67pol  a1b2c3d	0.324	       no     44.0	keep	baseline
+ad67hngb  b2c3d4e	0.312	       no     44.2	keep	parallelise per variable in sampling
+o9i8uugs  c3d4e5f	0.432	       yes    44.0	discard	vectorise masking
+lmn689u7  d4e5f6g	0.000000	   0.0     0.0	crash	change GPU all gather
 ```
 
 ## The experiment loop
