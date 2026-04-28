@@ -3,7 +3,7 @@
 To set up a new experiment, work with the user to:
 
 1. **Agree on a run tag**: propose a tag based on today's date (e.g. `apr27`). The branch `autoresearch/performance/<tag>` must not already exist — this is a fresh run.
-2. **Create the branch**: `git checkout -b autoresearch/performance/<tag>` from current develop-apr27. **Note** develop-apr27 is the main branch for these experiments, **not** develop.
+2. **Create the branch**: `git checkout -b autoresearch/performance/<tag>` from current `develop-apr27`. **Note** `develop-apr27` is the main branch for these experiments, **not** `develop`.
 3. **Read the in-scope files**: The repo is large. Read these directories for full context:
    - `src/weathergen/`— model code that you can modify. Model architecture, optimizer, training loop.
    - `config/` — the configuration files that you mostly cannot modify. 
