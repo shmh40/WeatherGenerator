@@ -425,6 +425,7 @@ class Trainer(TrainerBase):
         apply_fct_to_blocks(self.model, cf.freeze_modules, set_to_eval)
 
         dataset_iter = iter(self.data_loader)
+        use_grad_scaler = self.grad_scaler.is_enabled()
 
         self.optimizer.zero_grad(set_to_none=True)
 
@@ -478,10 +479,14 @@ class Trainer(TrainerBase):
 
             # backward pass
             self.optimizer.zero_grad(set_to_none=True)
-            self.grad_scaler.scale(loss).backward()
+            if use_grad_scaler:
+                self.grad_scaler.scale(loss).backward()
+            else:
+                loss.backward()
 
             # gradient clipping
-            self.grad_scaler.unscale_(self.optimizer)
+            if use_grad_scaler:
+                self.grad_scaler.unscale_(self.optimizer)
             total_norm = torch.nn.utils.clip_grad_norm_(
                 self.model.parameters(), max_norm=self.training_cfg.optimizer.grad_clip
             )
@@ -494,8 +499,11 @@ class Trainer(TrainerBase):
                     self._log_instant_grad_norms(TRAIN)
 
             # optimizer step
-            self.grad_scaler.step(self.optimizer)
-            self.grad_scaler.update()
+            if use_grad_scaler:
+                self.grad_scaler.step(self.optimizer)
+                self.grad_scaler.update()
+            else:
+                self.optimizer.step()
 
             # update learning rate
             self.lr_scheduler.step()
