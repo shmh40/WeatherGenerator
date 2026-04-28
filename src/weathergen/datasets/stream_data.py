@@ -156,7 +156,7 @@ class StreamData:
         self.target_tokens = [t.to(dv, non_blocking=True) for t in self.target_tokens]
 
         # move to device if source data is present
-        if not np.array([s is None for s in self.source_tokens_cells]).all():
+        if any(s is not None for s in self.source_tokens_cells):
             self.source_tokens_cells = [
                 s.to(dv, non_blocking=True) for s in self.source_tokens_cells
             ]
