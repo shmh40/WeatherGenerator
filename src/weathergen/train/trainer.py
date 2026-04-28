@@ -426,8 +426,6 @@ class Trainer(TrainerBase):
 
         dataset_iter = iter(self.data_loader)
 
-        self.optimizer.zero_grad(set_to_none=True)
-
         # training loop
         self.t_start = time.time()
         for bidx, batch in enumerate(dataset_iter):
