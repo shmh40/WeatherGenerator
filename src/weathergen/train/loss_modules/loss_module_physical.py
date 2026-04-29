@@ -308,9 +308,14 @@ class LossPhysical(LossModuleBase):
                             weights_locations,
                         )
 
-                        for ch_n, v in zip(target_channels, loss_lfct_chs, strict=True):
+                        logged_loss_lfct_chs = torch.where(
+                            loss_lfct_chs != 0.0,
+                            spoof_weight * loss_lfct_chs,
+                            torch.full_like(loss_lfct_chs, torch.nan),
+                        )
+                        for ch_n, v in zip(target_channels, logged_loss_lfct_chs, strict=True):
                             losses_all[stream_name][str(timestep_idx)][loss_fct_name][ch_n] = (
-                                spoof_weight * v if v != 0.0 else torch.nan
+                                v
                             )
 
                         # Add the weighted and normalized loss from this loss function to the total
