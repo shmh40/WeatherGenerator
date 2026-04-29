@@ -492,7 +492,9 @@ class Trainer(TrainerBase):
             if use_grad_scaler:
                 self.grad_scaler.unscale_(self.optimizer)
             total_norm = torch.nn.utils.clip_grad_norm_(
-                self.model.parameters(), max_norm=self.training_cfg.optimizer.grad_clip
+                self.model.parameters(),
+                max_norm=self.training_cfg.optimizer.grad_clip,
+                foreach=True,
             )
 
             # log gradient norms
