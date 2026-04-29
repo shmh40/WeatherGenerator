@@ -62,7 +62,7 @@ data_loading :
 
 ## Output format
 
-The slurm script will generate a random 8 character RUN_ID, which will be printed in the terminal. Once the slurm script has submitted its job and is running, it will save results to an output log file, located here: /hpcperm/ecm8347/work/wg_autoresearch_perf/WeatherGenerator/output/output_RUNID_SLURMID.txt, which has the following format, where the key metric is s/sec, and the loss:
+The slurm script will generate a random 8 character RUN_ID, which will be printed in the terminal. Once the slurm script has submitted its job and is running, it will save results to an output log file, located here: /hpcperm/ecm8347/work/wg_autoresearch_perf/WeatherGenerator/logs/RUNID/output.SLURMID.txt, which has the following format, where the key metric is s/sec, and the loss:
 
 ```
 ...
