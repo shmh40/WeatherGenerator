@@ -196,23 +196,13 @@ class LossPhysical(LossModuleBase):
         # counter for non-empty targets
         ctr_streams = 0
 
-        # initialize dictionaries for detailed loss tracking and standard deviation statistics
-        # create tensor for each stream
-        losses_all = defaultdict(dict)
+        loss_avg_values = defaultdict(lambda: defaultdict(dict))
 
         source2target_idxs, output_info, target2source_idxs, target_info = metadata
 
         # TODO: iterate over batch dimension
         for stream_info in self.cf.streams:
             stream_name = stream_info["name"]
-            # TODO: avoid this
-            target_channels = (
-                stream_info.val_target_channels
-                if self.stage == "val"
-                else stream_info.train_target_channels
-            )
-
-            losses_all[stream_name] = defaultdict(dict)
 
             stream_loss_weight, weights_channels = self._get_weights(stream_info)
 
@@ -292,9 +282,6 @@ class LossPhysical(LossModuleBase):
                             stream_info, timestep_idx, target_times
                         )
 
-                        losses_all[stream_name][str(timestep_idx)][loss_fct_name] = defaultdict(
-                            dict
-                        )
                         # loss_lfct: loss for given loss function aggregated over all channels
                         # loss_lfct_chs: loss for given loss function per channel
                         loss_lfct, loss_lfct_chs = self._loss_per_loss_function(
@@ -311,10 +298,10 @@ class LossPhysical(LossModuleBase):
                             spoof_weight * loss_lfct_chs,
                             torch.full_like(loss_lfct_chs, torch.nan),
                         )
-                        for ch_n, v in zip(target_channels, logged_loss_lfct_chs, strict=True):
-                            losses_all[stream_name][str(timestep_idx)][loss_fct_name][ch_n] = (
-                                v
-                            )
+                        loss_avg_values[stream_name][loss_fct_name][timestep_idx] = (
+                            logged_loss_lfct_chs.sum(),
+                            logged_loss_lfct_chs.numel(),
+                        )
 
                         # Add the weighted and normalized loss from this loss function to the total
                         # batch loss
@@ -342,29 +329,17 @@ class LossPhysical(LossModuleBase):
             )
         loss = loss / ctr_streams if ctr_streams > 0 else loss
 
-        def _nested_dict():
-            return defaultdict(dict)
-
-        # Reorder losses_all to [stream_name][loss_fct_name][ch_n][output_step]
         reordered_losses = defaultdict(dict)
-        for stream_name, output_step_dict in losses_all.items():
-            reordered_losses[stream_name] = defaultdict(_nested_dict)
-            for output_step, lfct_dict in output_step_dict.items():
-                for loss_fct_name, ch_dict in lfct_dict.items():
-                    for ch_n, v in ch_dict.items():
-                        reordered_losses[stream_name][loss_fct_name][ch_n][output_step] = v
-
-        # Calculate per stream, per lfct average across channels and output_steps
-        for stream_name, lfct_dict in reordered_losses.items():
-            for loss_fct_name, ch_dict in lfct_dict.items():
-                reordered_losses[stream_name][loss_fct_name]["avg"] = 0
+        for stream_name, lfct_dict in loss_avg_values.items():
+            reordered_losses[stream_name] = defaultdict(dict)
+            for loss_fct_name, step_values in lfct_dict.items():
+                loss_sum = None
                 count = 0
-                for ch_n, output_step_dict in ch_dict.items():
-                    if ch_n != "avg":
-                        for _, v in output_step_dict.items():
-                            reordered_losses[stream_name][loss_fct_name]["avg"] += v
-                            count += 1
-                reordered_losses[stream_name][loss_fct_name]["avg"] /= count
+                for value_sum, value_count in step_values.values():
+                    loss_sum = value_sum if loss_sum is None else loss_sum + value_sum
+                    count += value_count
+                if count > 0:
+                    reordered_losses[stream_name][loss_fct_name]["avg"] = loss_sum / count
 
         # Return all computed loss components encapsulated in a ModelLoss dataclass
         return LossValues(loss=loss, losses_all=reordered_losses, stddev_all=None)
