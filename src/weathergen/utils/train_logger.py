@@ -24,7 +24,7 @@ import torch
 import weathergen.common.config as config
 
 # from weathergen.train.trainer import cfg_keys_to_filter
-from weathergen.train.utils import Stage, flatten_dict
+from weathergen.train.utils import Stage
 from weathergen.utils.distributed import ddp_average
 from weathergen.utils.metrics import get_train_metrics_path, read_metrics_file
 
@@ -411,9 +411,8 @@ def prepare_terminal_losses_for_logging(
 
     losses_avg = defaultdict(list)
     for d in losses_unweighted_hist:
-        for key, value in flatten_dict(d).items():
-            if key.endswith("avg"):
-                value = torch.tensor(value, device="cuda") if type(value) is float else value
-                losses_avg[key].append(ddp_average(value).item())
+        for key, value in _iter_avg_items(d):
+            value = torch.tensor(value, device="cuda") if type(value) is float else value
+            losses_avg[key].append(ddp_average(value).item())
 
     return real_loss, losses_avg
