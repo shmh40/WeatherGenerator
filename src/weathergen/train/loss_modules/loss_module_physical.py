@@ -120,7 +120,7 @@ class LossPhysical(LossModuleBase):
         substep_masks = []
         for t in target_times_unique:
             # find substep
-            mask_t = torch.tensor(t == target_times).to(self.device, non_blocking=True)
+            mask_t = torch.as_tensor(t == target_times, device=self.device)
             substep_masks.append(mask_t)
 
         return substep_masks
@@ -239,6 +239,11 @@ class LossPhysical(LossModuleBase):
                 targets_times_batch = target_cur[stream_name]["target_times"]
                 targets_params = target_cur[stream_name]["target_metda_data"]
                 targets_is_spoof = target_cur[stream_name]["is_spoof"]
+                target_idx_by_native = {}
+                for i, t in enumerate(targets_params):
+                    idx_native = t[stream_name].global_params["idx"]
+                    assert idx_native not in target_idx_by_native
+                    target_idx_by_native[idx_native] = i
 
                 output_step_weight = output_step_loss_weights[timestep_idx]
 
@@ -249,17 +254,10 @@ class LossPhysical(LossModuleBase):
                     # source has a unique target but index is not invariant with multiple
                     # target_aux calculators
                     target_idx_native = pred_params.global_params.get("correspondence", -1)
-                    target_idx = [
-                        i
-                        for i, t in enumerate(targets_params)
-                        if t[stream_name].global_params["idx"] == target_idx_native
-                    ]
+                    target_idx = target_idx_by_native.get(target_idx_native, None)
                     # source/model_input has no target for physical loss
-                    if len(target_idx) == 0:
+                    if target_idx is None:
                         continue
-                    # source -> target correspondence has to be unique
-                    assert len(target_idx) == 1
-                    target_idx = target_idx[0]
 
                     # get weights for locations
                     weights_locations = self._get_location_weights(
