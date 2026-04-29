@@ -253,7 +253,11 @@ class Trainer(TrainerBase):
             "shuffle": False,
             "num_workers": cf.data_loading.num_workers,
             "pin_memory": cf.data_loading.get("memory_pinning", False),
-            "prefetch_factor": 12 if cf.data_loading.num_workers > 0 else None,
+<<<<<<< HEAD
+            "prefetch_factor": 15 if cf.data_loading.num_workers > 0 else None,
+=======
+            "prefetch_factor": 15 if cf.data_loading.num_workers > 0 else None,
+>>>>>>> autoresearch/performance/apr29-exp4-prefetch15
         }
         self.data_loader = torch.utils.data.DataLoader(self.dataset, **loader_params, sampler=None)
         self.data_loader_validation = torch.utils.data.DataLoader(
