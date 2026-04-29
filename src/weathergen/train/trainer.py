@@ -46,7 +46,11 @@ from weathergen.train.utils import (
     get_target_idxs_from_cfg,
 )
 from weathergen.utils.distributed import is_root
-from weathergen.utils.train_logger import TrainLogger, prepare_losses_for_logging
+from weathergen.utils.train_logger import (
+    TrainLogger,
+    prepare_losses_for_logging,
+    prepare_terminal_losses_for_logging,
+)
 from weathergen.utils.utils import get_dtype
 from weathergen.utils.validation_io import write_output
 
@@ -775,10 +779,9 @@ class Trainer(TrainerBase):
         if bidx % print_freq == 0 and bidx > 0 or stage == VAL:
             # compute from last iteration
             loss_calculator = self.loss_calculator_val if stage == VAL else self.loss_calculator
-            avg_loss, losses_all, _ = prepare_losses_for_logging(
+            avg_loss, losses_all = prepare_terminal_losses_for_logging(
                 loss_calculator.loss_hist,
                 loss_calculator.losses_unweighted_hist,
-                loss_calculator.stddev_unweighted_hist,
             )
 
             if is_root():

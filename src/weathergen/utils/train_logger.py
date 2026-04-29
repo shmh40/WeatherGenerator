@@ -369,3 +369,23 @@ def prepare_losses_for_logging(
                 stddev_all[key].append(ddp_average(value).item())
 
     return real_loss, losses_all, stddev_all
+
+
+def prepare_terminal_losses_for_logging(
+    loss_hist: list,
+    losses_unweighted_hist: list[dict],
+) -> tuple[list, dict]:
+    """
+    Aggregate only the loss entries printed by terminal logging.
+    """
+
+    real_loss = [ddp_average(loss).item() for loss in loss_hist]
+
+    losses_avg = defaultdict(list)
+    for d in losses_unweighted_hist:
+        for key, value in flatten_dict(d).items():
+            if key.endswith("avg"):
+                value = torch.tensor(value, device="cuda") if type(value) is float else value
+                losses_avg[key].append(ddp_average(value).item())
+
+    return real_loss, losses_avg
