@@ -359,7 +359,7 @@ def prepare_losses_for_logging(
     stddev_all = defaultdict(list)
 
     for d in losses_unweighted_hist:
-        for key, value in _iter_flat_items(d):
+        for key, value in _iter_avg_items(d):
             value = torch.tensor(value, device="cuda") if type(value) is float else value
             losses_all[key].append(ddp_average(value).item())
 
@@ -387,6 +387,15 @@ def _iter_flat_items(d: dict, parent_key: str = "", sep: str = "."):
                     else:
                         yield index_key, item
         else:
+            yield new_key, value
+
+
+def _iter_avg_items(d: dict, parent_key: str = "", sep: str = "."):
+    for key, value in d.items():
+        new_key = parent_key + sep + key if parent_key else key
+        if isinstance(value, dict):
+            yield from _iter_avg_items(value, new_key, sep)
+        elif key.endswith("avg"):
             yield new_key, value
 
 
