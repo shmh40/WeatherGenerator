@@ -141,7 +141,7 @@ class LossPhysical(LossModuleBase):
         loss_lfct = torch.tensor(0.0, device=target.device, requires_grad=True)
         losses_chs = torch.zeros(target.shape[-1], device=target.device, dtype=torch.float32)
 
-        ctr_substeps = 0
+        ctr_substeps = torch.tensor(0.0, device=target.device)
         for mask_t in substep_masks:
             loss, loss_chs = loss_fct(
                 target[mask_t], pred[:, mask_t], weights_channels, weights_locations
@@ -150,13 +150,14 @@ class LossPhysical(LossModuleBase):
             # accumulate loss
             loss_lfct = loss_lfct + loss
             losses_chs = losses_chs + loss_chs.detach() if len(loss_chs) > 0 else losses_chs
-            ctr_substeps += 1 if loss > 0.0 else 0
+            ctr_substeps = ctr_substeps + (loss.detach() > 0.0).to(dtype=ctr_substeps.dtype)
 
         # normalize over forecast steps in window
-        losses_chs /= ctr_substeps if ctr_substeps > 0 else 1.0
+        denom_substeps = torch.clamp(ctr_substeps, min=1.0)
+        losses_chs /= denom_substeps
 
         # TODO: substep weight
-        loss_lfct = loss_lfct / (ctr_substeps if ctr_substeps > 0 else 1.0)
+        loss_lfct = loss_lfct / denom_substeps
 
         return loss_lfct, losses_chs
 
@@ -194,7 +195,7 @@ class LossPhysical(LossModuleBase):
         # gradient loss
         loss = torch.tensor(0.0, device=self.device, requires_grad=True)
         # counter for non-empty targets
-        ctr_streams = 0
+        ctr_streams = torch.tensor(0.0, device=self.device)
 
         loss_avg_values = defaultdict(lambda: defaultdict(dict))
 
@@ -213,7 +214,7 @@ class LossPhysical(LossModuleBase):
 
             # loss_stream: loss for given stream
             loss_stream = torch.tensor(0.0, device=self.device, requires_grad=True)
-            ctr_timesteps = 0
+            ctr_timesteps = torch.tensor(0.0, device=self.device)
             for timestep_idx, (preds_cur, target_cur) in enumerate(
                 zip(preds.physical, targets.physical, strict=True)
             ):
@@ -237,7 +238,7 @@ class LossPhysical(LossModuleBase):
 
                 # loss_timestep: loss for given timestep
                 loss_timestep = torch.tensor(0.0, device=self.device, requires_grad=True)
-                ctr_batch = 0
+                ctr_batch = torch.tensor(0.0, device=self.device)
                 for pred, pred_params in zip(preds_batch, output_info, strict=True):
                     # source has a unique target but index is not invariant with multiple
                     # target_aux calculators
@@ -254,7 +255,7 @@ class LossPhysical(LossModuleBase):
 
                     # loss_st_corr: loss for give source-target correspondence
                     loss_st_corr = torch.tensor(0.0, device=self.device, requires_grad=True)
-                    ctr_loss_fcts = 0
+                    ctr_loss_fcts = torch.tensor(0.0, device=self.device)
                     for loss_fct, loss_fct_weight, loss_fct_name in self.loss_fcts:
                         # skip is loss is not computed for this sample
                         if loss_fct_name not in pred_params.global_params["loss"]:
@@ -307,27 +308,25 @@ class LossPhysical(LossModuleBase):
                         # batch loss
                         loss_cur_w = spoof_weight * loss_fct_weight * loss_lfct * output_step_weight
                         loss_st_corr = loss_st_corr + loss_cur_w
-                        ctr_loss_fcts += 1 if (loss_lfct > 0.0 and sw > 0.0) else 0
+                        valid_loss = (loss_lfct.detach() > 0.0).to(dtype=ctr_loss_fcts.dtype)
+                        if sw == 0.0:
+                            valid_loss = valid_loss * 0.0
+                        ctr_loss_fcts = ctr_loss_fcts + valid_loss
 
                     loss_timestep = loss_timestep + loss_st_corr
-                    ctr_batch += 1 if ctr_loss_fcts > 0.0 else 0
+                    ctr_batch = ctr_batch + (ctr_loss_fcts > 0.0).to(dtype=ctr_batch.dtype)
 
                 loss_stream = loss_stream + loss_timestep
-                ctr_timesteps += 1 if ctr_batch > 0 else 0
+                ctr_timesteps = ctr_timesteps + (ctr_batch > 0.0).to(dtype=ctr_timesteps.dtype)
 
-            denom = ctr_timesteps if ctr_timesteps > 0 else 1.0
+            denom = torch.clamp(ctr_timesteps, min=1.0)
             loss = loss + (stream_loss_weight * loss_stream) / denom
 
-            ctr_streams += 1 if ctr_timesteps > 0 else 0
+            ctr_streams = ctr_streams + (ctr_timesteps > 0.0).to(dtype=ctr_streams.dtype)
 
         # normalize by all targets and forecast steps that were non-empty
         # (with each having an expected loss of 1 for an uninitalized neural net)
-        if loss == 0.0:
-            _logger.warning(
-                "Loss is 0.0, likely incorrect configuration. Check stream"
-                " support time and training configuration."
-            )
-        loss = loss / ctr_streams if ctr_streams > 0 else loss
+        loss = loss / torch.clamp(ctr_streams, min=1.0)
 
         reordered_losses = defaultdict(dict)
         for stream_name, lfct_dict in loss_avg_values.items():
