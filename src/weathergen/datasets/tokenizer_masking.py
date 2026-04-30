@@ -211,6 +211,7 @@ class TokenizerMasking(Tokenizer):
             self.hpy_verts_local_target,
             self.hpy_nctrs_target,
             encode_times_target,
+            compute_coords_local=False,
         )
 
         idxs_ord_inv = None

@@ -311,6 +311,7 @@ def tokenize_apply_mask_target(
     hpy_verts_local,
     hpy_nctrs,
     enc_time,
+    compute_coords_local=True,
 ):
     """
     Apply masking to the data.
@@ -347,14 +348,20 @@ def tokenize_apply_mask_target(
 
     # apply mask
     datetimes = rdata.datetimes[idxs_data]
-    datetimes_enc = enc_time(datetimes, time_win)
-    geoinfos = rdata.geoinfos[idxs_data]
     coords = rdata.coords[idxs_data]
     data = rdata.data[idxs_data]
 
     if mask_channels is not None:
         assert False, "to be implemented"
         # data = data_padded[ : channel_mask]
+
+    if not compute_coords_local:
+        return data, datetimes, coords, torch.tensor([]), torch.zeros(
+            len(idxs_cells_lens), dtype=torch.int32
+        )
+
+    datetimes_enc = enc_time(datetimes, time_win)
+    geoinfos = rdata.geoinfos[idxs_data]
 
     num_tokens_per_cell = [len(idxs) for idxs in idxs_cells_lens]
     mask_tokens_per_cell = torch.split(torch.from_numpy(mask_tokens), num_tokens_per_cell)
