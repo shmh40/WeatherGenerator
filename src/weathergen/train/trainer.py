@@ -46,7 +46,11 @@ from weathergen.train.utils import (
     get_target_idxs_from_cfg,
 )
 from weathergen.utils.distributed import is_root
-from weathergen.utils.train_logger import TrainLogger, prepare_losses_for_logging
+from weathergen.utils.train_logger import (
+    TrainLogger,
+    prepare_losses_for_logging,
+    prepare_terminal_losses_for_logging,
+)
 from weathergen.utils.utils import get_dtype
 from weathergen.utils.validation_io import write_output
 
@@ -252,6 +256,8 @@ class Trainer(TrainerBase):
             "batch_sampler": None,
             "shuffle": False,
             "num_workers": cf.data_loading.num_workers,
+            "pin_memory": cf.data_loading.get("memory_pinning", False),
+            "prefetch_factor": 16 if cf.data_loading.num_workers > 0 else None,
         }
         self.data_loader = torch.utils.data.DataLoader(self.dataset, **loader_params, sampler=None)
         self.data_loader_validation = torch.utils.data.DataLoader(
@@ -322,7 +328,10 @@ class Trainer(TrainerBase):
             betas=(beta1, beta2),
             eps=eps,
         )
-        self.grad_scaler = torch.amp.GradScaler("cuda")
+        # bf16 does not need gradient scaling (same dynamic range as fp32).
+        self.grad_scaler = torch.amp.GradScaler(
+            "cuda", enabled=(self.mixed_precision_dtype == torch.float16)
+        )
 
         assert len(self.dataset) > 0, f"No data found in {self.dataset}"
 
@@ -422,16 +431,11 @@ class Trainer(TrainerBase):
         apply_fct_to_blocks(self.model, cf.freeze_modules, set_to_eval)
 
         dataset_iter = iter(self.data_loader)
-
-        self.optimizer.zero_grad()
+        use_grad_scaler = self.grad_scaler.is_enabled()
 
         # training loop
         self.t_start = time.time()
         for bidx, batch in enumerate(dataset_iter):
-            if cf.data_loading.get("memory_pinning", False):
-                # pin memory for faster CPU-GPU transfer
-                batch = batch.pin_memory()
-
             batch.to_device(self.device)
 
             with torch.autocast(
@@ -478,13 +482,19 @@ class Trainer(TrainerBase):
             ]
 
             # backward pass
-            self.optimizer.zero_grad()
-            self.grad_scaler.scale(loss).backward()
+            self.optimizer.zero_grad(set_to_none=True)
+            if use_grad_scaler:
+                self.grad_scaler.scale(loss).backward()
+            else:
+                loss.backward()
 
             # gradient clipping
-            self.grad_scaler.unscale_(self.optimizer)
+            if use_grad_scaler:
+                self.grad_scaler.unscale_(self.optimizer)
             total_norm = torch.nn.utils.clip_grad_norm_(
-                self.model.parameters(), max_norm=self.training_cfg.optimizer.grad_clip
+                self.model.parameters(),
+                max_norm=self.training_cfg.optimizer.grad_clip,
+                foreach=True,
             )
 
             # log gradient norms
@@ -495,8 +505,11 @@ class Trainer(TrainerBase):
                     self._log_instant_grad_norms(TRAIN)
 
             # optimizer step
-            self.grad_scaler.step(self.optimizer)
-            self.grad_scaler.update()
+            if use_grad_scaler:
+                self.grad_scaler.step(self.optimizer)
+                self.grad_scaler.update()
+            else:
+                self.optimizer.step()
 
             # update learning rate
             self.lr_scheduler.step()
@@ -560,10 +573,6 @@ class Trainer(TrainerBase):
                 total=len(self.data_loader_validation), disable=self.cf.with_ddp
             ) as pbar:
                 for bidx, batch in enumerate(dataset_val_iter):
-                    if cf.data_loading.get("memory_pinning", False):
-                        # pin memory for faster CPU-GPU transfer
-                        batch = batch.pin_memory()
-
                     batch.to_device(self.device)
 
                     # evaluate model
@@ -772,10 +781,9 @@ class Trainer(TrainerBase):
         if bidx % print_freq == 0 and bidx > 0 or stage == VAL:
             # compute from last iteration
             loss_calculator = self.loss_calculator_val if stage == VAL else self.loss_calculator
-            avg_loss, losses_all, _ = prepare_losses_for_logging(
+            avg_loss, losses_all = prepare_terminal_losses_for_logging(
                 loss_calculator.loss_hist,
                 loss_calculator.losses_unweighted_hist,
-                loss_calculator.stddev_unweighted_hist,
             )
 
             if is_root():

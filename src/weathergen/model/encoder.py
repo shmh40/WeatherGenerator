@@ -9,7 +9,6 @@
 
 import torch
 from astropy_healpix import healpy
-from torch.utils.checkpoint import checkpoint
 
 from weathergen.common.config import Config
 from weathergen.datasets.batch import ModelBatch
@@ -122,19 +121,15 @@ class EncoderModule(torch.nn.Module):
         Encoder forward
         """
 
-        stream_cell_tokens = checkpoint(
-            self.embed_engine, batch, model_params.pe_embed, use_reentrant=False
+        stream_cell_tokens = self.embed_engine(batch, model_params.pe_embed)
+
+        tokens_global, posteriors = self.assimilate_local(
+            model_params, stream_cell_tokens, batch
         )
 
-        tokens_global, posteriors = checkpoint(
-            self.assimilate_local, model_params, stream_cell_tokens, batch, use_reentrant=False
-        )
-
-        tokens_global = checkpoint(
-            self.ae_global_engine,
+        tokens_global = self.ae_global_engine(
             tokens_global,
             coords=model_params.rope_coords,
-            use_reentrant=False,
         )
 
         return tokens_global, posteriors

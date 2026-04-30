@@ -24,7 +24,7 @@ import torch
 import weathergen.common.config as config
 
 # from weathergen.train.trainer import cfg_keys_to_filter
-from weathergen.train.utils import Stage, flatten_dict
+from weathergen.train.utils import Stage
 from weathergen.utils.distributed import ddp_average
 from weathergen.utils.metrics import get_train_metrics_path, read_metrics_file
 
@@ -359,13 +359,60 @@ def prepare_losses_for_logging(
     stddev_all = defaultdict(list)
 
     for d in losses_unweighted_hist:
-        for key, value in flatten_dict(d).items():
+        for key, value in _iter_avg_items(d):
             value = torch.tensor(value, device="cuda") if type(value) is float else value
             losses_all[key].append(ddp_average(value).item())
 
     for d in stddev_unweighted_hist:
-        for key, value in flatten_dict(d).items():
+        for key, value in _iter_flat_items(d):
             if value:
                 stddev_all[key].append(ddp_average(value).item())
 
     return real_loss, losses_all, stddev_all
+
+
+def _iter_flat_items(d: dict, parent_key: str = "", sep: str = "."):
+    for key, value in d.items():
+        new_key = parent_key + sep + key if parent_key else key
+        if isinstance(value, dict):
+            yield from _iter_flat_items(value, new_key, sep)
+        elif isinstance(value, list):
+            if all(not isinstance(item, (dict, list)) for item in value):
+                yield new_key, value
+            else:
+                for i, item in enumerate(value):
+                    index_key = new_key + sep + str(i)
+                    if isinstance(item, dict):
+                        yield from _iter_flat_items(item, index_key, sep)
+                    else:
+                        yield index_key, item
+        else:
+            yield new_key, value
+
+
+def _iter_avg_items(d: dict, parent_key: str = "", sep: str = "."):
+    for key, value in d.items():
+        new_key = parent_key + sep + key if parent_key else key
+        if isinstance(value, dict):
+            yield from _iter_avg_items(value, new_key, sep)
+        elif key.endswith("avg"):
+            yield new_key, value
+
+
+def prepare_terminal_losses_for_logging(
+    loss_hist: list,
+    losses_unweighted_hist: list[dict],
+) -> tuple[list, dict]:
+    """
+    Aggregate only the loss entries printed by terminal logging.
+    """
+
+    real_loss = [ddp_average(loss).item() for loss in loss_hist]
+
+    losses_avg = defaultdict(list)
+    for d in losses_unweighted_hist:
+        for key, value in _iter_avg_items(d):
+            value = torch.tensor(value, device="cuda") if type(value) is float else value
+            losses_avg[key].append(ddp_average(value).item())
+
+    return real_loss, losses_avg
